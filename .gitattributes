@@ -1,0 +1,15 @@
+# 统一行尾：仓库里一律 LF，Windows 检出时也不自动转成 CRLF，
+# 避免 Git Bash 下的脚本因 CRLF 报 "bad interpreter"。
+* text=auto eol=lf
+
+# 二进制
+*.exe binary
+*.ico binary
+*.png binary
+*.jpg binary
+*.zip binary
+
+# 构建产物不计入语言统计
+dist/** linguist-generated=true
+release/** linguist-generated=true
+package-lock.json linguist-generated=true -diff

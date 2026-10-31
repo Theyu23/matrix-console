@@ -1,0 +1,113 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    # 主开发环境是 Windows：画像里的平台标识是 Win32，打包目标也是 portable exe。
+    # 但绝大部分逻辑是纯函数，先在 Linux 上跑通测试能更早发现跨平台问题。
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      - name: 单元测试
+        run: npm test
+
+      - name: 渲染层构建
+        run: npm run build
+
+      # 打包清单的静态检查已经包含在 npm test 里（tests/packaging.test.js），
+      # 这里只验证配置文件本身能被 electron-builder 解析。
+      - name: 校验打包配置
+        run: npx electron-builder --dir --publish never --config electron-builder.yml
+        if: runner.os == 'Linux'
+        continue-on-error: true
+
+  smoke-windows:
+    # 真实应用冒烟：Electron 的 webview 行为在 Linux 上跑不出来，
+    # 只能在 Windows runner 上验证。
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+
+      - name: 启动应用并确认没有崩溃
+        shell: pwsh
+        run: |
+          # 错误对话框也是带标题的窗口，只看「有没有窗口」会把崩溃误判成成功。
+          # 应枚举该进程全部顶层窗口，确认标题是产品名且无错误框。
+          #
+          # 不能 Start-Process npx 再查那个 PID：npx 拉起 electron 后自己就退了，
+          # 拿到的是个已死的 PID，会误报失败。改查 electron 进程本身。
+          Get-Process electron -ErrorAction SilentlyContinue | Stop-Process -Force
+          npx electron . 2>&1 | Tee-Object -Variable appOutput | Out-Null &
+          Start-Sleep -Seconds 15
+
+          $procs = Get-Process electron -ErrorAction SilentlyContinue
+          if (-not $procs) {
+            Write-Host "--- 应用输出 ---"
+            Write-Host $appOutput
+            Write-Error "electron 进程未存活（启动即崩溃）"
+            exit 1
+          }
+
+          # 枚举所有顶层窗口标题：崩溃时会弹出错误框，标题不是产品名。
+          Add-Type @"
+          using System;
+          using System.Text;
+          using System.Collections.Generic;
+          using System.Runtime.InteropServices;
+          public class Win {
+            [DllImport("user32.dll")] public static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+            [DllImport("user32.dll")] public static extern int GetWindowTextLength(IntPtr hWnd);
+            [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern int GetWindowText(IntPtr hWnd, StringBuilder s, int n);
+            [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint pid);
+            [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr hWnd);
+            public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+            public static List<string> Titles(uint pid) {
+              var outv = new List<string>();
+              EnumWindows((h, l) => {
+                uint p; GetWindowThreadProcessId(h, out p);
+                if (p == pid && IsWindowVisible(h)) {
+                  int n = GetWindowTextLength(h);
+                  if (n > 0) { var sb = new StringBuilder(n + 1); GetWindowText(h, sb, sb.Capacity); outv.Add(sb.ToString()); }
+                }
+                return true;
+              }, IntPtr.Zero);
+              return outv;
+            }
+          }
+          "@
+
+          $titles = @()
+          foreach ($p in $procs) { $titles += [Win]::Titles([uint32]$p.Id) }
+          Write-Host "窗口标题: $($titles -join ' | ')"
+
+          $bad = $titles | Where-Object { $_ -match '错误|Error|Crash|Exception|not found|MODULE_NOT_FOUND' }
+          if ($bad) {
+            Write-Error "检测到错误对话框: $($bad -join ' | ')"
+            exit 1
+          }
+
+          Get-Process electron -ErrorAction SilentlyContinue | Stop-Process -Force
+          Write-Host "应用启动正常"

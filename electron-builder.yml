@@ -1,0 +1,39 @@
+appId: com.matrixconsole.desktop
+productName: 矩阵账号控制台
+copyright: Copyright © 2026 Matrix Console
+
+directories:
+  output: release
+  buildResources: build
+
+files:
+  - dist/**/*
+  - electron/**/*
+  # 主进程 import 了 src/isolation.js（双端共享的画像/代理逻辑）
+  # 和 src/egress.js（出口实测的协议常量与 IP 解析）。
+  # 只把 dist 和 electron 打进去会让主进程在运行时 MODULE_NOT_FOUND：
+  # 本地 npx electron 能跑，是因为项目目录里有这个文件；asar 里没有就崩。
+  # 新增这类共享模块时必须在这里补一行，tests/packaging.test.js 会拦。
+  - src/isolation.js
+  - src/egress.js
+  - package.json
+
+asar: true
+npmRebuild: false
+electronVersion: 45.1.0
+electronDist: node_modules/electron/dist
+electronLanguages:
+  - zh-CN
+  - en-US
+
+win:
+  target:
+    - target: portable
+      arch:
+        - x64
+  icon: build/icon.ico
+  executableName: matrix-console
+
+portable:
+  artifactName: Matrix-Console-Portable-${version}.${ext}
+  requestExecutionLevel: user

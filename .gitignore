@@ -1,0 +1,33 @@
+# 依赖与构建产物
+node_modules/
+dist/
+release/
+
+# 打好的成品与启动器。几十 MB 的二进制不进版本库，走 GitHub Releases。
+*.exe
+*.msi
+*.dmg
+*.AppImage
+*.zip
+
+# 冒烟/调试脚本留下的临时输出。
+# 这些文件里会带上本机路径、探测到的 IP 和页面 URL，不该进公开仓库。
+live-log.txt
+nat-log.txt
+nat-out.json
+attach-log.txt
+attach-out.json
+inject-debug.log
+*.log
+/out/
+
+# 编辑器与系统
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# 本地环境变量（万一将来有）
+.env
+.env.*

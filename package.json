@@ -1,0 +1,45 @@
+{
+  "name": "matrix-console",
+  "version": "0.1.0",
+  "description": "本地多账号运营控制台：会话隔离、出口代理、设备画像",
+  "author": "Theyu23",
+  "license": "MIT",
+  "private": false,
+  "type": "module",
+  "main": "electron/main.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Theyu23/matrix-console.git"
+  },
+  "homepage": "https://github.com/Theyu23/matrix-console#readme",
+  "bugs": {
+    "url": "https://github.com/Theyu23/matrix-console/issues"
+  },
+  "keywords": [
+    "electron",
+    "vue",
+    "multi-account",
+    "webview"
+  ],
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "vite build --watch",
+    "build": "vite build",
+    "test": "node --test",
+    "app": "electron .",
+    "pack": "npm run build && electron-builder --dir --publish never",
+    "dist": "npm run build && electron-builder --win portable --publish never && node scripts/sync-launcher.mjs",
+    "dist:portable": "npm run dist"
+  },
+  "dependencies": {
+    "vue": "^3.5.13"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.1",
+    "electron": "45.1.0",
+    "electron-builder": "^26.18.0",
+    "vite": "^6.0.7"
+  }
+}

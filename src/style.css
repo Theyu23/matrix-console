@@ -1,0 +1,27 @@
+:root {
+  --sidebar: #111820;
+  --line: #e5e7eb;
+  --brand: #fe2c55;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font: 14px/1.5 "Segoe UI", "Microsoft YaHei", sans-serif;
+  color: #1f2329;
+  background: #f5f6f7;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
