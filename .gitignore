@@ -24,6 +24,7 @@ inject-debug.log
 # 编辑器与系统
 .vscode/
 .idea/
+.claude/
 *.swp
 .DS_Store
 Thumbs.db
