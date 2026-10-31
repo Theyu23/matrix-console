@@ -4,7 +4,9 @@ import { ENV_PROBE_SCRIPT, ENV_FIELDS, summarizeEnv } from '../src/envProbe.js'
 
 // 探测脚本要在页面里真跑，语法错误必须在这里暴露。
 function runProbe() {
-  const fn = new Function('window', 'document', 'return (' + ENV_PROBE_SCRIPT + ')')
+  // 探测脚本引用的是全局 Intl，不是 window.Intl；把 mock 作为函数参数注入，
+  // 否则测试会读到运行机器的真实时区，CI（UTC）与本地（Asia/Shanghai）结果不同。
+  const fn = new Function('window', 'document', 'Intl', 'return (' + ENV_PROBE_SCRIPT + ')')
   return fn(
     {
       navigator: {
@@ -19,8 +21,7 @@ function runProbe() {
         userAgentData: { platform: 'Windows', mobile: false }
       },
       screen: { width: 1920, height: 1080, colorDepth: 24 },
-      devicePixelRatio: 1.25,
-      Intl: { DateTimeFormat: () => ({ resolvedOptions: () => ({ timeZone: 'Asia/Shanghai' }) }) }
+      devicePixelRatio: 1.25
     },
     {
       createElement: () => ({
@@ -29,7 +30,8 @@ function runProbe() {
           getParameter: () => ''
         })
       })
-    }
+    },
+    { DateTimeFormat: () => ({ resolvedOptions: () => ({ timeZone: 'Asia/Shanghai' }) }) }
   )
 }
 
